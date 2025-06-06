@@ -22,7 +22,12 @@
   },
   "dependencies": {
     "@electron-toolkit/preload": "^3.0.0",
-    "@electron-toolkit/utils": "^3.0.0"
+    "@electron-toolkit/utils": "^3.0.0",
+    "@types/markdown-it": "^14.1.2",
+    "electron-store": "^8.2.0",
+    "markdown-it": "^14.1.0",
+    "openai": "^5.1.1",
+    "simple-git": "^3.27.0"
   },
   "devDependencies": {
     "@electron-toolkit/eslint-config": "^1.0.2",

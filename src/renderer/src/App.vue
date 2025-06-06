@@ -1,26 +1,63 @@
-<script setup lang="ts">
-import Versions from './components/Versions.vue'
+<template>
+  <div class="my-app">
+    <div class="daily-wrapper">
+      <LeftMenu v-model:active="activeComponent" :paths="workspacePaths" />
+      <div class="content">
+        <component 
+          :is="currentComponent" 
+          v-if="currentComponent === MyLogs"
+          :paths="workspacePaths"
+        />
+        <component 
+          :is="currentComponent" 
+          v-else
+          v-model:paths="workspacePaths"
+        />
+      </div>
+    </div>
+  </div>
+</template>
 
-const ipcHandle = () => window.electron.ipcRenderer.send('ping')
+<script setup lang="ts">
+import { ref, computed } from 'vue';
+import LeftMenu from './components/LeftMenu.vue';
+import MyLogs from './components/MyLogs.vue';
+import MyWorkspace from './components/MyWorkspace.vue';
+
+const activeComponent = ref('workspace');
+const workspacePaths = ref<string[]>([]);
+
+const currentComponent = computed(() => {
+  switch (activeComponent.value) {
+    case 'logs':
+      return MyLogs;
+    case 'workspace':
+      return MyWorkspace;
+    default:
+      return MyWorkspace;
+  }
+});
 </script>
 
-<template>
-  <img alt="logo" class="logo" src="./assets/electron.svg" />
-  <div class="creator">Powered by electron-vite</div>
-  <div class="text">
-    Build an Electron app with
-    <span class="vue">Vue</span>
-    and
-    <span class="ts">TypeScript</span>
-  </div>
-  <p class="tip">Please try pressing <code>F12</code> to open the devTool</p>
-  <div class="actions">
-    <div class="action">
-      <a href="https://electron-vite.org/" target="_blank" rel="noreferrer">Documentation</a>
-    </div>
-    <div class="action">
-      <a target="_blank" rel="noreferrer" @click="ipcHandle">Send IPC</a>
-    </div>
-  </div>
-  <Versions />
-</template>
+<style scoped>
+.my-app {
+  width: 100%;
+  height: 100vh;
+  /* background: #f5f5f5; */
+}
+
+.daily-wrapper {
+  width: 100%;
+  height: 100%;
+  display: flex;
+}
+
+.content {
+  flex: 1;
+  padding: 24px;
+  background: #ffffff0c;
+  margin: 16px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+</style>
