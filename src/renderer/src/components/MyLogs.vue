@@ -47,7 +47,7 @@
 <script setup lang="ts">
 import { ref, onMounted, watch, nextTick } from 'vue';
 
-interface Commit {
+interface GitCommit {
   hash: string;
   date: string;
   message: string;
@@ -55,13 +55,15 @@ interface Commit {
   repo: string;
 }
 
+type GitCommitResult = GitCommit[] | { error: string };
+
 interface Props {
   paths: string[];
 }
 
 const props = defineProps<Props>();
 
-const commits = ref<Commit[]>([]);
+const commits = ref<GitCommit[]>([]);
 const loading = ref(false);
 const error = ref('');
 
@@ -111,14 +113,14 @@ const fetchCommits = async () => {
     console.log('Fetching commits for paths:', props.paths);
     const results = await Promise.all(
       props.paths.map(path => window.electronAPI.getGitCommits(path))
-    );
+    ) as GitCommitResult[];
 
     const allCommits = results.flatMap((result, index) => {
-      if (result.error) {
+      if ('error' in result) {
         console.error(`Error fetching commits from ${props.paths[index]}:`, result.error);
         return [];
       }
-      return result.map((commit: { hash: string; date: string; message: string; author_name: string }) => ({
+      return result.map(commit => ({
         ...commit,
         repo: props.paths[index]
       }));
@@ -128,9 +130,9 @@ const fetchCommits = async () => {
       new Date(b.date).getTime() - new Date(a.date).getTime()
     );
     console.log('Fetched commits:', commits.value.length);
-  } catch (err) {
-    console.error('Error fetching commits:', err);
-    error.value = `获取提交日志时出错：${err}`;
+  } catch (err: unknown) {
+    console.error('Failed to fetch commits:', err);
+    error.value = `获取提交日志时出错：${err instanceof Error ? err.message : String(err)}`;
     commits.value = [];
   } finally {
     loading.value = false;
