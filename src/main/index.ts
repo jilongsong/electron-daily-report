@@ -84,6 +84,7 @@ app.whenReady().then(() => {
 1. 只总结提交记录中实际体现的工作内容
 2. 保持客观、简洁的表述
 3. 只是用普通文本输出，不要带任何标记
+4. 使用中文输出
 
 提交记录:
 ${commits.map(commit => `- ${commit.message} (${commit.date})`).join('\n')}
