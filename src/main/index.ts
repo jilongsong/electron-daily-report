@@ -80,28 +80,31 @@ app.whenReady().then(() => {
   // Add API call handler
   ipcMain.handle('generate-daily-report', async (_, commits) => {
     try {
-      const prompt = `请根据以下Git提交记录生成一份日报,包含今日工作内容和遇到的问题:
+      const prompt = `请根据以下Git提交记录生成一份日报。要求:
+1. 只总结提交记录中实际体现的工作内容
+2. 保持客观、简洁的表述
+3. 只是用普通文本输出，不要带任何标记
 
+提交记录:
 ${commits.map(commit => `- ${commit.message} (${commit.date})`).join('\n')}
 
-请按照以下格式生成:
-1. 今日工作内容: 总结今天完成的主要工作
-2. 遇到的问题: 分析提交记录中可能存在的问题或需要改进的地方`
+请严格按照以下格式输出:
+1. 今日工作内容: 
+    1.xxxxx
+    2.xxxxx
+    3. ...
+2. 遇到的问题: 仅列出提交记录中明确提到的问题或改进点`
 
       const requestBody = {
-        model: 'Qwen/QwQ-32B',
+        model: 'Qwen/Qwen3-32B',
         messages: [{ role: 'user', content: prompt }],
         stream: false,
-        max_tokens: 512,
         temperature: 0.7,
         top_p: 0.7,
         top_k: 50,
         frequency_penalty: 0.5,
         n: 1
       }
-
-      console.log('Making API request to:', API_URL)
-      console.log('Request body:', JSON.stringify(requestBody, null, 2))
 
       const response = await fetch(API_URL, {
         method: 'POST',
