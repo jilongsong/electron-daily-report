@@ -106,8 +106,21 @@ const generateReport = async () => {
       }))
     })
 
+    // Filter commits for today only
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const todayCommits = allCommits.filter(commit => {
+      const commitDate = new Date(commit.date);
+      return commitDate >= today;
+    });
+
+    if (todayCommits.length === 0) {
+      throw new Error('今天还没有提交记录')
+    }
+
     // Sort commits by date
-    const sortedCommits = allCommits.sort((a, b) => 
+    const sortedCommits = todayCommits.sort((a, b) => 
       new Date(b.date).getTime() - new Date(a.date).getTime()
     )
 
@@ -129,6 +142,10 @@ const generateReport = async () => {
     showReport.value = true
   } catch (error) {
     console.error('Failed to generate report:', error)
+    // Show error message to user
+    if (error instanceof Error) {
+      alert(error.message)
+    }
   } finally {
     isGenerating.value = false
   }

@@ -126,9 +126,17 @@ const fetchCommits = async () => {
       }));
     });
 
-    commits.value = allCommits.sort((a, b) => 
-      new Date(b.date).getTime() - new Date(a.date).getTime()
-    );
+    // Filter commits for today only
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    commits.value = allCommits
+      .filter(commit => {
+        const commitDate = new Date(commit.date);
+        return commitDate >= today;
+      })
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
     console.log('Fetched commits:', commits.value.length);
   } catch (err: unknown) {
     console.error('Failed to fetch commits:', err);
