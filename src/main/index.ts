@@ -8,6 +8,14 @@ import simpleGit from 'simple-git'
 const API_KEY = 'sk-fqtorqeqoafdilkroppjlcidwphfjtkdqdsslzvcgysbqwap'
 const API_URL = 'https://api.siliconflow.cn/v1/chat/completions'
 
+interface Commit {
+  hash: string
+  date: string
+  message: string
+  author_name: string
+  repo: string
+}
+
 function createWindow(): void {
   // Create the browser window.
   const mainWindow = new BrowserWindow({
@@ -78,15 +86,18 @@ app.whenReady().then(() => {
   });
 
   // Add API call handler
-  ipcMain.handle('generate-daily-report', async (_, commits) => {
+  ipcMain.handle('generate-daily-report', async (_, commits: Commit[], manualContent: string) => {
     try {
-      const prompt = `请根据以下Git提交记录生成一份日报。要求:
+      const prompt = `请根据以下Git提交记录以及手动输入的额外记录生成一份日报。要求:
 1. 只总结提交记录中实际体现的工作内容
 2. 只使用用普通文本输出，不要带任何标记
 3. 使用中文输出
 
 提交记录:
 ${commits.map(commit => `- ${commit.message} (${commit.date})`).join('\n')}
+
+额外记录:
+${manualContent}
 
 请严格按照以下格式输出:
 1. 今日工作内容: 

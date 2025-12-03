@@ -16,7 +16,7 @@ declare global {
   interface Window {
     electronAPI: {
       getGitCommits: (path: string) => Promise<GitCommitResult>
-      generateDailyReport: (commits: GitCommit[]) => Promise<{ report?: string; error?: string }>
+      generateDailyReport: (commits: GitCommit[], manualContent: string) => Promise<{ report?: string; error?: string }>
     }
   }
 }

@@ -2,6 +2,25 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Custom Scrollbar for nicer UI */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #585858;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #35383b;
+}
+
+body {
+    font-family: 'Inter', sans-serif;
+}
+
 @layer base {
   :root {
     color-scheme: dark;
@@ -14,20 +33,5 @@
     background-position: center;
     background-repeat: no-repeat;
   }
-
-  #app {
-    @apply min-h-screen;
-  }
 }
 
-@layer components {
-  .gradient-title {
-    @apply bg-clip-text text-transparent;
-    background-image: linear-gradient(135deg, #42d392 25%, #647eff 75%);
-  }
-
-  .gradient-ts {
-    @apply bg-clip-text text-transparent;
-    background-image: linear-gradient(135deg, #3178c6 45%, #f0dc4e 90%);
-  }
-}

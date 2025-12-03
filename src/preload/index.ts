@@ -36,5 +36,5 @@ if (process.contextIsolated) {
 
 contextBridge.exposeInMainWorld('electronAPI', {
   getGitCommits: (path: string) => ipcRenderer.invoke('git:get-commits', path),
-  generateDailyReport: (commits: Commit[]) => ipcRenderer.invoke('generate-daily-report', commits)
+  generateDailyReport: (commits: Commit[], manualContent: string) => ipcRenderer.invoke('generate-daily-report', commits, manualContent)
 })
