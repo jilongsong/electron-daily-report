@@ -7,6 +7,7 @@ interface Commit {
   message: string
   author_name: string
   repo: string
+  repoName?: string
 }
 
 // Custom APIs for renderer

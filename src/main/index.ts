@@ -14,6 +14,7 @@ interface Commit {
   message: string
   author_name: string
   repo: string
+  repoName?: string
 }
 
 function createWindow(): void {
@@ -88,23 +89,49 @@ app.whenReady().then(() => {
   // Add API call handler
   ipcMain.handle('generate-daily-report', async (_, commits: Commit[], manualContent: string) => {
     try {
-      const prompt = `请根据以下Git提交记录以及手动输入的额外记录生成一份日报。要求:
-1. 只总结提交记录中实际体现的工作内容
-2. 只使用用普通文本输出，不要带任何标记
-3. 使用中文输出
+      const groupedCommits = commits.reduce((acc: Record<string, Commit[]>, commit) => {
+        const repoLabel = commit.repoName || commit.repo || '未命名项目'
+        if (!acc[repoLabel]) {
+          acc[repoLabel] = []
+        }
+        acc[repoLabel].push(commit)
+        return acc
+      }, {})
 
-提交记录:
-${commits.map(commit => `- ${commit.message} (${commit.date})`).join('\n')}
+      const commitSection = Object.entries(groupedCommits)
+        .map(([repoLabel, repoCommits]) => {
+          const lines = repoCommits
+            .map((commit) => `- ${commit.message} (${commit.date})`)
+            .join('\n')
+          return `【${repoLabel}】\n${lines}`
+        })
+        .join('\n\n')
+
+      const trimmedManual = manualContent?.trim() || '（无）'
+
+      const prompt = `请根据以下按项目归类的Git提交记录以及额外手动记录生成一份日报。要求:
+1. 按项目名称对工作内容进行分组输出，将同一项目下的提交记录归类在一起
+2. 仅总结提交记录及额外记录中实际体现的工作内容，不要臆测
+3. 使用中文输出，保持专业、客观
+4. 输出纯文本，不要包含 Markdown 标记
+
+按项目分类的提交记录:
+${commitSection}
 
 额外记录:
-${manualContent}
+${trimmedManual}
 
 请严格按照以下格式输出:
-1. 今日工作内容: 
-    1.xxxxx
-    2.xxxxx
+1. 今日工作内容:
+    【项目名称】
+    1. xxxxx
+    2. xxxxx
     3. ...
-2. 遇到的问题: 仅列出提交记录中明确提到的问题或改进点`
+  【项目名称】
+    1. xxxxx
+    2. xxxxx
+    3. ... 
+2. 遇到的问题: 仅列出提交记录或额外记录中明确提到的问题或改进点`
 
       const requestBody = {
         model: 'Qwen/Qwen3-32B',

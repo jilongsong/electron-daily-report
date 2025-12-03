@@ -1,6 +1,6 @@
 import React from 'react';
 import { Commit } from '../types';
-import { CheckCircle2, Circle, GitCommit, Clock, User } from 'lucide-react';
+import { CheckCircle2, Circle, GitCommit, Clock, User, Folder } from 'lucide-react';
 
 interface CommitListProps {
   commits: Commit[];
@@ -44,6 +44,7 @@ export const CommitList: React.FC<CommitListProps> = ({
       <div className="flex-1 overflow-y-auto p-4 space-y-3">
         {commits.map((commit) => {
           const isSelected = selectedCommitHashes.has(commit.hash);
+          const repoLabel = commit.repoName || (commit.repo ? commit.repo.split(/[/\\]/).pop() : undefined);
           return (
             <div
               key={commit.hash}
@@ -74,9 +75,10 @@ export const CommitList: React.FC<CommitListProps> = ({
                     <User className="w-3 h-3" />
                     {commit.author_name}
                   </span>
-                   {commit.repo && (
+                   {repoLabel && (
                     <span className="flex items-center gap-1 text-xs text-accent/70 bg-accent/10 px-1.5 rounded">
-                      {commit.repo.split(/[/\\]/).pop()}
+                      <Folder className="w-3 h-3" />
+                      {repoLabel}
                     </span>
                   )}
                 </div>

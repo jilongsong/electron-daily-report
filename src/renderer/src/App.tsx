@@ -1,16 +1,42 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { RepoSidebar } from './components/RepoSidebar';
 import { CommitList } from './components/CommitList';
 import { ManualInput } from './components/ManualInput';
 import { ReportView } from './components/ReportView';
-import { AppState, Commit } from './types';
+import { AppState, Commit, RepoEntry } from './types';
 import { Sparkles, Loader2, Play } from 'lucide-react';
 
 const App: React.FC = () => {
   // State: Repositories (Persisted in localStorage in a real app, keeping simple here for now)
-  const [repos, setRepos] = useState<string[]>(() => {
+  const [repos, setRepos] = useState<RepoEntry[]>(() => {
     const saved = localStorage.getItem('gitreport_repos');
-    return saved ? JSON.parse(saved) : [];
+    if (!saved) {
+      return [];
+    }
+
+    try {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed)) {
+        if (parsed.length === 0) {
+          return [];
+        }
+
+        if (typeof parsed[0] === 'string') {
+          return parsed.map((path: string) => ({
+            path,
+            name: path.split(/[/\\]/).pop() || path,
+          }));
+        }
+
+        if (typeof parsed[0] === 'object' && parsed[0]?.path) {
+          return parsed as RepoEntry[];
+        }
+      }
+    } catch (error) {
+      console.error('Failed to parse repositories from storage:', error);
+    }
+
+    return [];
   });
 
   const MANUAL_NOTES_STORAGE_KEY = 'gitreport_manual_notes';
@@ -46,21 +72,36 @@ const App: React.FC = () => {
   const [appState, setAppState] = useState<AppState>(AppState.IDLE);
   const [error, setError] = useState<string | null>(null);
 
+  const persistManualNotes = useCallback(
+    (nextNotes: Record<string, string>) => {
+      setManualNotes(nextNotes);
+      localStorage.setItem(MANUAL_NOTES_STORAGE_KEY, JSON.stringify(nextNotes));
+    },
+    []
+  );
+
   // Persistence
   useEffect(() => {
     localStorage.setItem('gitreport_repos', JSON.stringify(repos));
   }, [repos]);
 
-  const handleAddRepo = (path: string) => {
-    if (!repos.includes(path)) {
-      setRepos([...repos, path]);
+  const handleAddRepo = (entry: RepoEntry) => {
+    if (!repos.some(repo => repo.path === entry.path)) {
+      setRepos([...repos, entry]);
       hasFetchedAllRef.current = false;
     }
   };
 
   const handleRemoveRepo = (path: string) => {
-    setRepos(repos.filter(r => r !== path));
+    setRepos(repos.filter(r => r.path !== path));
     if (selectedRepo === path) setSelectedRepo(null);
+
+    if (manualNotes[path]) {
+      const nextNotes = { ...manualNotes };
+      delete nextNotes[path];
+      persistManualNotes(nextNotes);
+    }
+
     hasFetchedAllRef.current = false;
   };
 
@@ -70,14 +111,6 @@ const App: React.FC = () => {
     setCommits([]);
     hasFetchedAllRef.current = false;
   }, []);
-
-  const persistManualNotes = useCallback(
-    (nextNotes: Record<string, string>) => {
-      setManualNotes(nextNotes);
-      localStorage.setItem(MANUAL_NOTES_STORAGE_KEY, JSON.stringify(nextNotes));
-    },
-    []
-  );
 
   const getRepoStorageKey = useCallback(
     (repo: string | null) => {
@@ -102,6 +135,15 @@ const App: React.FC = () => {
     [selectedRepo, manualNotes, persistManualNotes, getRepoStorageKey]
   );
 
+  const selectedRepoEntry = useMemo(
+    () => (selectedRepo ? repos.find(repo => repo.path === selectedRepo) ?? null : null),
+    [selectedRepo, repos]
+  );
+
+  const selectedRepoName = selectedRepoEntry?.name ?? 'All Repositories';
+
+  const isAllRepositories = selectedRepo === null;
+
   const fetchCommits = useCallback(async () => {
     setAppState(AppState.FETCHING_COMMITS);
     setError(null);
@@ -110,7 +152,9 @@ const App: React.FC = () => {
 
     try {
       let fetchedCommits: Commit[] = [];
-      const targets = selectedRepo ? [selectedRepo] : repos;
+      const targets = selectedRepo
+        ? repos.filter(repo => repo.path === selectedRepo)
+        : repos;
 
       if (targets.length === 0) {
         setError("No repositories selected.");
@@ -118,7 +162,8 @@ const App: React.FC = () => {
         return;
       }
 
-      for (const path of targets) {
+      for (const repoEntry of targets) {
+        const { path, name } = repoEntry;
         // Ensure window.electronAPI exists (it won't in standard browser dev)
         if (!window.electronAPI) {
           throw new Error("Electron API not found. Are you running in Electron?");
@@ -128,7 +173,11 @@ const App: React.FC = () => {
 
         if (Array.isArray(result)) {
           // Tag commits with their source repo for the UI
-          const tagged = result.map(c => ({ ...c, repo: path }));
+          const tagged = result.map(c => ({
+            ...c,
+            repo: path,
+            repoName: name,
+          }));
           fetchedCommits = [...fetchedCommits, ...tagged];
         } else if (result && 'error' in result) {
           console.error(`Error fetching ${path}:`, result.error);
@@ -298,6 +347,8 @@ const App: React.FC = () => {
         <ManualInput 
           value={manualContent}
           onChange={handleManualContentChange}
+          contextLabel={selectedRepoName}
+          isAllRepositories={isAllRepositories}
         />
         
         {/* Action Bar */}
@@ -329,7 +380,7 @@ const App: React.FC = () => {
                     ) : (
                         <>
                             <Sparkles className="w-4 h-4" />
-                            Generate Report
+                            Generate
                         </>
                     )}
                 </button>

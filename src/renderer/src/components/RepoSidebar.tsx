@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { FolderPlus, Trash2, GitBranch, Folder } from 'lucide-react';
+import { FolderPlus, Trash2, GitBranch, Folder, Tags } from 'lucide-react';
+import { RepoEntry } from '../types';
 
 interface RepoSidebarProps {
-  repos: string[];
+  repos: RepoEntry[];
   selectedRepo: string | null;
-  onAddRepo: (path: string) => void;
+  onAddRepo: (repo: RepoEntry) => void;
   onRemoveRepo: (path: string) => void;
   onSelectRepo: (path: string | null) => void;
 }
@@ -17,15 +18,23 @@ export const RepoSidebar: React.FC<RepoSidebarProps> = ({
   onSelectRepo,
 }) => {
   const [newPath, setNewPath] = useState('');
+  const [newName, setNewName] = useState('');
   const [isAdding, setIsAdding] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (newPath.trim()) {
-      onAddRepo(newPath.trim());
-      setNewPath('');
-      setIsAdding(false);
+    const trimmedPath = newPath.trim();
+    if (!trimmedPath) {
+      return;
     }
+
+    const derivedName = trimmedPath.split(/[/\\]/).pop() || trimmedPath;
+    const finalName = newName.trim() || derivedName;
+
+    onAddRepo({ path: trimmedPath, name: finalName });
+    setNewPath('');
+    setNewName('');
+    setIsAdding(false);
   };
 
   return (
@@ -53,22 +62,22 @@ export const RepoSidebar: React.FC<RepoSidebarProps> = ({
         <div className="my-2 border-t border-slate-700/50" />
         
         {repos.map((repo) => {
-           // Extract folder name from path for display
-           const folderName = repo.split(/[/\\]/).pop() || repo;
+           const { path, name } = repo;
+           const folderName = name || path.split(/[/\\]/).pop() || path;
            
            return (
             <div
-              key={repo}
+              key={path}
               className={`group flex items-center justify-between rounded-md px-3 py-2 transition-colors text-sm ${
-                selectedRepo === repo
+                selectedRepo === path
                   ? 'bg-slate-700 text-white shadow-sm'
                   : 'text-slate-400 hover:bg-slate-700/50 hover:text-slate-200'
               }`}
             >
               <button
-                onClick={() => onSelectRepo(repo)}
+                onClick={() => onSelectRepo(path)}
                 className="flex-1 text-left truncate flex items-center gap-2"
-                title={repo}
+                title={path}
               >
                 <Folder className="w-4 h-4 opacity-50" />
                 <span className="truncate">{folderName}</span>
@@ -76,7 +85,7 @@ export const RepoSidebar: React.FC<RepoSidebarProps> = ({
               <button
                 onClick={(e) => {
                   e.stopPropagation();
-                  onRemoveRepo(repo);
+                  onRemoveRepo(path);
                 }}
                 className="opacity-0 group-hover:opacity-100 p-1 hover:text-red-400 transition-opacity"
               >
@@ -90,14 +99,26 @@ export const RepoSidebar: React.FC<RepoSidebarProps> = ({
       <div className="p-4 border-t border-slate-700 bg-surface">
         {isAdding ? (
           <form onSubmit={handleSubmit} className="flex flex-col gap-2">
-            <input
-              autoFocus
-              type="text"
-              placeholder="/path/to/repo"
-              value={newPath}
-              onChange={(e) => setNewPath(e.target.value)}
-              className="w-full bg-slate-900 border border-slate-600 rounded px-2 py-1 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-primary"
-            />
+            <div className="flex flex-col gap-2">
+              <input
+                autoFocus
+                type="text"
+                placeholder="/path/to/repo"
+                value={newPath}
+                onChange={(e) => setNewPath(e.target.value)}
+                className="w-full bg-slate-900 border border-slate-600 rounded px-2 py-1 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-primary"
+              />
+              <div className="flex items-center gap-2">
+                <Tags className="w-3.5 h-3.5 text-slate-500" />
+                <input
+                  type="text"
+                  placeholder="Optional display name"
+                  value={newName}
+                  onChange={(e) => setNewName(e.target.value)}
+                  className="flex-1 bg-slate-900 border border-slate-600 rounded px-2 py-1 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-primary"
+                />
+              </div>
+            </div>
             <div className="flex gap-2">
               <button
                 type="submit"

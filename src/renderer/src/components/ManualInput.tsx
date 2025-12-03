@@ -4,14 +4,19 @@ import { PenLine } from 'lucide-react';
 interface ManualInputProps {
   value: string;
   onChange: (value: string) => void;
+  contextLabel: string;
+  isAllRepositories: boolean;
 }
 
-export const ManualInput: React.FC<ManualInputProps> = ({ value, onChange }) => {
+export const ManualInput: React.FC<ManualInputProps> = ({ value, onChange, contextLabel, isAllRepositories }) => {
   return (
     <div className="flex flex-col bg-slate-900/30 border-t border-slate-700/50">
       <div className="flex items-center gap-2 px-4 py-3 bg-surface/50">
         <PenLine className="w-4 h-4 text-accent" />
-        <h3 className="text-sm font-medium text-slate-300">Additional Activities & Notes</h3>
+        <div className="flex flex-col">
+          <h3 className="text-sm font-medium text-slate-300">Additional Activities & Notes</h3>
+          <span className="text-[11px] text-slate-500">Scope: {contextLabel}{isAllRepositories ? ' (applies to all projects)' : ''}</span>
+        </div>
       </div>
       <div className="p-4 pt-0">
         <textarea
