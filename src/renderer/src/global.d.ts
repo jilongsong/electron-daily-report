@@ -1,26 +1,22 @@
 // src/global.d.ts
-export {};
 
-interface GitCommit {
-  hash: string
-  date: string
-  message: string
-  author_name: string
-}
-
-type GitCommitResult = GitCommit[] | { error: string }
+export {}
 
 declare global {
+  interface GitCommit {
+    hash: string
+    date: string
+    message: string
+    author_name: string
+    repo: string
+  }
+
+  type GitCommitResult = GitCommit[] | { error: string }
+
   interface Window {
     electronAPI: {
       getGitCommits: (path: string) => Promise<GitCommitResult>
-      generateDailyReport: (commits: {
-        hash: string
-        date: string
-        message: string
-        author_name: string
-        repo: string
-      }[]) => Promise<{ report?: string; error?: string }>
+      generateDailyReport: (commits: GitCommit[]) => Promise<{ report?: string; error?: string }>
     }
   }
 }

@@ -4,14 +4,12 @@ require('@rushstack/eslint-patch/modern-module-resolution')
 module.exports = {
   extends: [
     'eslint:recommended',
-    'plugin:vue/vue3-recommended',
     '@electron-toolkit',
     '@electron-toolkit/eslint-config-ts/eslint-recommended',
-    '@vue/eslint-config-typescript/recommended',
-    '@vue/eslint-config-prettier'
+    'plugin:react/recommended',
+    'plugin:react-hooks/recommended'
   ],
   rules: {
-    'vue/require-default-prop': 'off',
-    'vue/multi-word-component-names': 'off'
+    'react/react-in-jsx-scope': 'off'
   }
 }

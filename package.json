@@ -1,15 +1,15 @@
 {
   "name": "electron-app",
   "version": "1.0.0",
-  "description": "An Electron application with Vue and TypeScript",
+  "description": "An Electron application with React and Tailwind CSS",
   "main": "./out/main/index.js",
   "author": "example.com",
   "homepage": "https://electron-vite.org",
   "scripts": {
     "format": "prettier --write .",
-    "lint": "eslint . --ext .js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts,.vue --fix",
+    "lint": "eslint . --ext .js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix",
     "typecheck:node": "tsc --noEmit -p tsconfig.node.json --composite false",
-    "typecheck:web": "vue-tsc --noEmit -p tsconfig.web.json --composite false",
+    "typecheck:web": "tsc --noEmit -p tsconfig.web.json --composite false",
     "typecheck": "npm run typecheck:node && npm run typecheck:web",
     "start": "electron-vite preview",
     "dev": "electron-vite dev",
@@ -27,6 +27,9 @@
     "electron-store": "^8.2.0",
     "markdown-it": "^14.1.0",
     "openai": "^5.1.1",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "clsx": "^2.1.1",
     "simple-git": "^3.27.0"
   },
   "devDependencies": {
@@ -35,18 +38,20 @@
     "@electron-toolkit/tsconfig": "^1.0.1",
     "@rushstack/eslint-patch": "^1.7.1",
     "@types/node": "^18.19.9",
-    "@vitejs/plugin-vue": "^5.0.3",
-    "@vue/eslint-config-prettier": "^9.0.0",
-    "@vue/eslint-config-typescript": "^12.0.0",
+    "@types/react": "^18.3.11",
+    "@types/react-dom": "^18.3.2",
+    "@vitejs/plugin-react": "^4.3.4",
+    "autoprefixer": "^10.4.20",
     "electron": "^36.4.0",
     "electron-builder": "^26.0.12",
-    "electron-vite": "^2.0.0",
+    "electron-vite": "^4.0.1",
     "eslint": "^8.56.0",
-    "eslint-plugin-vue": "^9.20.1",
+    "eslint-plugin-react": "^7.34.4",
+    "eslint-plugin-react-hooks": "^4.6.2",
+    "postcss": "^8.4.47",
     "prettier": "^3.2.4",
+    "tailwindcss": "^3.4.14",
     "typescript": "^5.8.3",
-    "vite": "^5.0.12",
-    "vue": "^3.4.15",
-    "vue-tsc": "^2.2.10"
+    "vite": "^5.0.12"
   }
 }
