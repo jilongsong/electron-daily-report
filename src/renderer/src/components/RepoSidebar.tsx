@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FolderPlus, Trash2, GitBranch, Folder, Tags } from 'lucide-react';
+import { FolderPlus, Trash2, GitBranch, Folder, Tags, Settings, History } from 'lucide-react';
 import { RepoEntry } from '../types';
 
 interface RepoSidebarProps {
@@ -8,6 +8,8 @@ interface RepoSidebarProps {
   onAddRepo: (repo: RepoEntry) => void;
   onRemoveRepo: (path: string) => void;
   onSelectRepo: (path: string | null) => void;
+  onOpenSettings: () => void;
+  onOpenHistory: () => void;
 }
 
 export const RepoSidebar: React.FC<RepoSidebarProps> = ({
@@ -16,6 +18,8 @@ export const RepoSidebar: React.FC<RepoSidebarProps> = ({
   onAddRepo,
   onRemoveRepo,
   onSelectRepo,
+  onOpenSettings,
+  onOpenHistory,
 }) => {
   const [newPath, setNewPath] = useState('');
   const [newName, setNewName] = useState('');
@@ -40,10 +44,28 @@ export const RepoSidebar: React.FC<RepoSidebarProps> = ({
   return (
     <div className="w-64 bg-surface border-r border-slate-700 flex flex-col h-screen">
       <div className="p-4 border-b border-slate-700">
-        <h2 className="text-lg font-bold text-white flex items-center gap-2">
-          <GitBranch className="text-primary w-5 h-5" />
-          GitReport AI
-        </h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-bold text-white flex items-center gap-2">
+            <GitBranch className="text-primary w-5 h-5" />
+            GitReport AI
+          </h2>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={onOpenHistory}
+              className="p-1.5 rounded-md hover:bg-slate-700 text-slate-400 hover:text-white transition-colors"
+              title="历史报告"
+            >
+              <History className="w-4 h-4" />
+            </button>
+            <button
+              onClick={onOpenSettings}
+              className="p-1.5 rounded-md hover:bg-slate-700 text-slate-400 hover:text-white transition-colors"
+              title="设置"
+            >
+              <Settings className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto p-2 space-y-1">
@@ -56,7 +78,7 @@ export const RepoSidebar: React.FC<RepoSidebarProps> = ({
           }`}
         >
           <FolderPlus className="w-4 h-4" />
-          All Repositories
+          所有仓库
         </button>
 
         <div className="my-2 border-t border-slate-700/50" />
@@ -103,7 +125,7 @@ export const RepoSidebar: React.FC<RepoSidebarProps> = ({
               <input
                 autoFocus
                 type="text"
-                placeholder="/path/to/repo"
+                placeholder="仓库路径，如 /path/to/repo"
                 value={newPath}
                 onChange={(e) => setNewPath(e.target.value)}
                 className="w-full bg-slate-900 border border-slate-600 rounded px-2 py-1 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-primary"
@@ -112,7 +134,7 @@ export const RepoSidebar: React.FC<RepoSidebarProps> = ({
                 <Tags className="w-3.5 h-3.5 text-slate-500" />
                 <input
                   type="text"
-                  placeholder="Optional display name"
+                  placeholder="显示名称（可选）"
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
                   className="flex-1 bg-slate-900 border border-slate-600 rounded px-2 py-1 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-primary"
@@ -124,14 +146,14 @@ export const RepoSidebar: React.FC<RepoSidebarProps> = ({
                 type="submit"
                 className="flex-1 bg-primary hover:bg-blue-600 text-white text-xs py-1 rounded transition-colors"
               >
-                Add
+                添加
               </button>
               <button
                 type="button"
                 onClick={() => setIsAdding(false)}
                 className="flex-1 bg-slate-700 hover:bg-slate-600 text-white text-xs py-1 rounded transition-colors"
               >
-                Cancel
+                取消
               </button>
             </div>
           </form>
@@ -140,7 +162,7 @@ export const RepoSidebar: React.FC<RepoSidebarProps> = ({
             onClick={() => setIsAdding(true)}
             className="w-full flex items-center justify-center gap-2 bg-slate-700 hover:bg-slate-600 text-white py-2 rounded-md text-sm transition-colors"
           >
-            <FolderPlus className="w-4 h-4" /> Add Repository
+            <FolderPlus className="w-4 h-4" /> 添加仓库
           </button>
         )}
       </div>

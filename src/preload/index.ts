@@ -1,15 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
 
-interface Commit {
-  hash: string
-  date: string
-  message: string
-  author_name: string
-  repo: string
-  repoName?: string
-}
-
 // Custom APIs for renderer
 const api = {
   getGitLogs: () => ipcRenderer.invoke('git:get-logs')
@@ -36,6 +27,12 @@ if (process.contextIsolated) {
 }
 
 contextBridge.exposeInMainWorld('electronAPI', {
-  getGitCommits: (path: string) => ipcRenderer.invoke('git:get-commits', path),
-  generateDailyReport: (commits: Commit[], manualContent: string) => ipcRenderer.invoke('generate-daily-report', commits, manualContent)
+  getGitCommits: (path: string, since?: string, until?: string) =>
+    ipcRenderer.invoke('git:get-commits', path, since, until),
+  generateReport: (request: any, aiConfig: any, promptTemplate: string) =>
+    ipcRenderer.invoke('generate-report', request, aiConfig, promptTemplate),
+  loadSettings: () => ipcRenderer.invoke('settings:load'),
+  saveSettings: (settings: any) => ipcRenderer.invoke('settings:save', settings),
+  loadReportHistory: () => ipcRenderer.invoke('history:load'),
+  saveReportHistory: (history: any) => ipcRenderer.invoke('history:save', history)
 })

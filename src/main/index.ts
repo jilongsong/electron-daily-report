@@ -3,25 +3,96 @@ import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import simpleGit from 'simple-git'
-
-// Initialize API client
-const API_KEY = 'sk-fqtorqeqoafdilkroppjlcidwphfjtkdqdsslzvcgysbqwap'
-const API_URL = 'https://api.siliconflow.cn/v1/chat/completions'
+import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs'
 
 interface Commit {
   hash: string
   date: string
   message: string
+  body?: string
   author_name: string
   repo: string
   repoName?: string
 }
 
+interface AIConfig {
+  apiUrl: string
+  apiKey: string
+  model: string
+}
+
+interface ReportRequest {
+  commits: Commit[]
+  manualContent: string
+  reportType: 'daily' | 'weekly' | 'monthly'
+  dateRange: { since: string; until: string }
+}
+
+// --- Persistence helpers ---
+const dataDir = join(app.getPath('userData'), 'gitreport-data')
+
+function ensureDataDir(): void {
+  if (!existsSync(dataDir)) {
+    mkdirSync(dataDir, { recursive: true })
+  }
+}
+
+function loadJSON<T>(filename: string, fallback: T): T {
+  try {
+    ensureDataDir()
+    const filePath = join(dataDir, filename)
+    if (!existsSync(filePath)) return fallback
+    return JSON.parse(readFileSync(filePath, 'utf-8')) as T
+  } catch {
+    return fallback
+  }
+}
+
+function saveJSON(filename: string, data: unknown): void {
+  ensureDataDir()
+  writeFileSync(join(dataDir, filename), JSON.stringify(data, null, 2), 'utf-8')
+}
+
+// --- Build prompt from template + request data ---
+function buildPrompt(request: ReportRequest, promptTemplate: string): string {
+  const { commits, manualContent, dateRange } = request
+
+  const groupedCommits = commits.reduce((acc: Record<string, Commit[]>, commit) => {
+    const repoLabel = commit.repoName || commit.repo || '未命名项目'
+    if (!acc[repoLabel]) acc[repoLabel] = []
+    acc[repoLabel].push(commit)
+    return acc
+  }, {})
+
+  const commitSection = Object.entries(groupedCommits)
+    .map(([repoLabel, repoCommits]) => {
+      const lines = repoCommits
+        .map((commit) => {
+          const base = `- ${commit.message} (${commit.date})`
+          if (commit.body) {
+            const bodyLines = commit.body.split('\n').filter((l) => l.trim()).map((l) => `  ${l.trim()}`).join('\n')
+            return `${base}\n${bodyLines}`
+          }
+          return base
+        })
+        .join('\n')
+      return `【${repoLabel}】\n${lines}`
+    })
+    .join('\n\n')
+
+  const trimmedManual = manualContent?.trim() || '（无）'
+  const dateRangeStr = `${dateRange.since} 至 ${dateRange.until}`
+
+  return promptTemplate
+    .replace(/\{\{dateRange\}\}/g, dateRangeStr)
+    .replace(/\{\{commits\}\}/g, commitSection)
+    .replace(/\{\{manual\}\}/g, trimmedManual)
+}
+
 function createWindow(): void {
-  // Create the browser window.
   const mainWindow = new BrowserWindow({
-    width: 900,
-    height: 670,
+    width: 1100,
+    height: 750,
     show: false,
     autoHideMenuBar: true,
     ...(process.platform === 'linux' ? { icon } : {}),
@@ -76,65 +147,73 @@ app.whenReady().then(() => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })
 
-  ipcMain.handle('git:get-commits', async (_, path: string) => {
+  // --- Settings persistence ---
+  ipcMain.handle('settings:load', async () => {
+    return loadJSON('settings.json', {})
+  })
+
+  ipcMain.handle('settings:save', async (_, settings: unknown) => {
+    saveJSON('settings.json', settings)
+  })
+
+  // --- Report history persistence ---
+  ipcMain.handle('history:load', async () => {
+    return loadJSON('report-history.json', [])
+  })
+
+  ipcMain.handle('history:save', async (_, history: unknown) => {
+    saveJSON('report-history.json', history)
+  })
+
+  // --- Git commits with date range (full message including body) ---
+  ipcMain.handle('git:get-commits', async (_, path: string, since?: string, until?: string) => {
     try {
-      const git = simpleGit(path);
-      const log = await git.log({ '--since': '1 day ago' });
-      return log.all;
+      const git = simpleGit(path)
+
+      const DELIM = '---GR_DELIM---'
+      const RECORD_SEP = '---GR_RECORD---'
+      // %H=hash, %aI=authorDateISO, %an=authorName, %s=subject, %b=body
+      const format = `${RECORD_SEP}%H${DELIM}%aI${DELIM}%an${DELIM}%s${DELIM}%b`
+
+      const args = ['log', `--pretty=format:${format}`]
+      if (since) args.push(`--since=${since} 00:00:00`)
+      else if (!until) args.push('--since=1 day ago')
+      if (until) args.push(`--until=${until} 23:59:59`)
+
+      const raw = await git.raw(args)
+      if (!raw || !raw.trim()) return []
+
+      const records = raw.split(RECORD_SEP).filter((s) => s.trim())
+      const commits = records.map((record) => {
+        const parts = record.split(DELIM)
+        const hash = (parts[0] || '').trim()
+        const date = (parts[1] || '').trim()
+        const author_name = (parts[2] || '').trim()
+        const message = (parts[3] || '').trim()
+        const body = (parts[4] || '').trim()
+        return { hash, date, message, body, author_name }
+      })
+
+      return commits
     } catch (error) {
-      return { error };
+      return { error }
     }
-  });
+  })
 
-  // Add API call handler
-  ipcMain.handle('generate-daily-report', async (_, commits: Commit[], manualContent: string) => {
+  // --- Report generation with configurable AI ---
+  ipcMain.handle('generate-report', async (_, request: ReportRequest, aiConfig: AIConfig, promptTemplate: string) => {
     try {
-      const groupedCommits = commits.reduce((acc: Record<string, Commit[]>, commit) => {
-        const repoLabel = commit.repoName || commit.repo || '未命名项目'
-        if (!acc[repoLabel]) {
-          acc[repoLabel] = []
-        }
-        acc[repoLabel].push(commit)
-        return acc
-      }, {})
+      if (!aiConfig.apiKey) {
+        throw new Error('请先在设置中配置 API Key')
+      }
+      if (!aiConfig.apiUrl) {
+        throw new Error('请先在设置中配置 API URL')
+      }
 
-      const commitSection = Object.entries(groupedCommits)
-        .map(([repoLabel, repoCommits]) => {
-          const lines = repoCommits
-            .map((commit) => `- ${commit.message} (${commit.date})`)
-            .join('\n')
-          return `【${repoLabel}】\n${lines}`
-        })
-        .join('\n\n')
-
-      const trimmedManual = manualContent?.trim() || '（无）'
-
-      const prompt = `请根据以下按项目归类的Git提交记录以及额外手动记录生成一份日报。要求:
-1. 按项目名称对工作内容进行分组输出，将同一项目下的提交记录归类在一起
-2. 仅总结提交记录及额外记录中实际体现的工作内容，不要臆测
-3. 使用中文输出，保持专业、客观
-4. 输出纯文本，不要包含 Markdown 标记
-
-按项目分类的提交记录:
-${commitSection}
-
-额外记录:
-${trimmedManual}
-
-请严格按照以下格式输出:
-1. 今日工作内容:
-    【项目名称】
-    1. xxxxx
-    2. xxxxx
-    3. ...
-  【项目名称】
-    1. xxxxx
-    2. xxxxx
-    3. ... 
-2. 遇到的问题: 仅列出提交记录或额外记录中明确提到的问题或改进点`
+      const prompt = buildPrompt(request, promptTemplate)
 
       const requestBody = {
-        model: 'Qwen/Qwen3-32B',
+        model: aiConfig.model || 'Qwen/Qwen3-32B',
         messages: [{ role: 'user', content: prompt }],
         stream: false,
         temperature: 0.7,
@@ -144,10 +223,10 @@ ${trimmedManual}
         n: 1
       }
 
-      const response = await fetch(API_URL, {
+      const response = await fetch(aiConfig.apiUrl, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${API_KEY}`,
+          'Authorization': `Bearer ${aiConfig.apiKey}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify(requestBody)
@@ -160,12 +239,12 @@ ${trimmedManual}
           statusText: response.statusText,
           body: errorText
         })
-        throw new Error(`API request failed with status ${response.status}: ${errorText}`)
+        throw new Error(`API 请求失败 (${response.status}): ${errorText}`)
       }
 
       const data = await response.json()
       if (!data.choices?.[0]?.message?.content) {
-        throw new Error('Invalid API response format')
+        throw new Error('API 返回格式异常')
       }
 
       const report = data.choices[0].message.content
