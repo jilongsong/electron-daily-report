@@ -106,7 +106,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   placeholder="https://api.openai.com/v1/chat/completions"
                   className="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
                 />
-                <p className="text-xs text-slate-500">支持 OpenAI 兼容接口，如 SiliconFlow、DeepSeek、Ollama 等</p>
+                <p className="text-xs text-slate-500">支持 OpenAI 兼容接口（会自动补全 /chat/completions），如 SiliconFlow、DashScope、DeepSeek 等</p>
               </div>
 
               {/* API Key */}

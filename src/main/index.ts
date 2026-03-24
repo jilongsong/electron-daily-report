@@ -212,6 +212,12 @@ app.whenReady().then(() => {
 
       const prompt = buildPrompt(request, promptTemplate)
 
+      // Normalize API URL: auto-append /chat/completions if missing
+      let apiUrl = aiConfig.apiUrl.replace(/\/+$/, '')
+      if (!apiUrl.endsWith('/chat/completions')) {
+        apiUrl = apiUrl + '/chat/completions'
+      }
+
       const requestBody = {
         model: aiConfig.model || 'Qwen/Qwen3-32B',
         messages: [{ role: 'user', content: prompt }],
@@ -223,7 +229,7 @@ app.whenReady().then(() => {
         n: 1
       }
 
-      const response = await fetch(aiConfig.apiUrl, {
+      const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${aiConfig.apiKey}`,
